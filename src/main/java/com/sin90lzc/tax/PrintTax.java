@@ -1,14 +1,27 @@
 package com.sin90lzc.tax;
 
-import java.util.ArrayList;
-import java.util.Collection;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Random;
 
-import com.sin90lzc.tax.constant.Alignment;
-import com.sin90lzc.tax.util.StringUtil;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+
+//import com.sin90lzc.tax.constant.Alignment;
+//import com.sin90lzc.tax.util.StringUtil;
 import com.sin90lzc.util.FormatManager;
+import com.sin90lzc.util.enu.Alignment;
 import com.sin90lzc.util.enums.DateFormatPattern;
+import com.sin90lzc.util.str.StringUtil;
 import com.sin90lzc.util.system.SystemProperty;
 
 public class PrintTax {
@@ -21,30 +34,77 @@ public class PrintTax {
 
 	private static final int MAX_LEN = 16;
 
-	private static final String UNIT_PRICE = "2.60Ôª";
+	private static final String UNIT_PRICE = "2.60å…ƒ";
 
 	private static final char APPEND_CHAR = ' ';
 
 	private static final Random random = new Random(37);
-	
-	private static final int BLANK_LINE_SIZE=8;
 
-	public static void main(String[] args) {
-		Collection<String> col = new ArrayList<String>();
-		for (int i = 0; i < 10000; i++) {
-			String taxPhone = getTaxPhone();
-			System.out.println(taxPhone);
-			if (col.contains(taxPhone)) {
-				System.out.println(i);
-				throw new RuntimeException("error!");
-			} else {
-				col.add(taxPhone);
+	private static final int BLANK_LINE_SIZE = 8;
+
+	private static int onBoardHour = 0;
+	private static int onBoardMin = 0;
+
+	public static void main(String[] args) throws Exception {
+		if (args.length == 0) {
+			throw new Exception("please at least provide excel file path!");
+		}
+		String filePath = null;
+		int sheetIndex = 0;
+		filePath = args[0];
+		if (!new File(filePath).exists()) {
+			throw new Exception("not exists file " + filePath);
+		}
+		if (args.length > 1) {
+			sheetIndex = Integer.parseInt(args[1]);
+		}
+		InputStream is = null;
+		BufferedReader reader = new BufferedReader(new InputStreamReader(
+				System.in));
+		boolean isMore = false;
+		try {
+			is = new FileInputStream(filePath);
+			Workbook workbook = WorkbookFactory.create(is);
+			Sheet sheet = workbook.getSheetAt(sheetIndex);
+			Iterator<Row> rowIt = sheet.iterator();
+			while (rowIt.hasNext()) {
+				Row row = rowIt.next();
+				Cell c0 = row.getCell(0);
+				if (c0.getCellType() != Cell.CELL_TYPE_NUMERIC) {
+					throw new Exception("ç¬¬ä¸€åˆ—ä¸æ˜¯æ—¥æœŸç±»å‹ï¼");
+				}
+				Cell c1 = row.getCell(1);
+				if (c1.getCellType() != Cell.CELL_TYPE_NUMERIC) {
+					throw new Exception("ç¬¬äºŒåˆ—ä¸æ˜¯æ•°å­—ç±»å‹ï¼");
+				}
+				Date taxDate = c0.getDateCellValue();
+				double money = c1.getNumericCellValue();
+				String receipt = getOneReceipt(money, taxDate);
+				System.out.println(receipt);
+				if (!isMore) {
+					System.out.println("continue(Y/N/MORE)?");
+				} else {
+					continue;
+				}
+				String oper=reader.readLine();
+				if ("Y".equals(oper)) {
+					continue;
+				} else if ("MORE".equals(oper)) {
+					isMore = true;
+					continue;
+				} else {
+					break;
+				}
+			}
+		} finally {
+			if (is != null) {
+				is.close();
 			}
 		}
 	}
 
 	/**
-	 * ¸ù¾İ·ÑÓÃºÍÊ±¼ä£¬Éú³ÉÒ»ÕÅ·¢Æ±µÄ´òÓ¡ÎÄ±¾
+	 * è·å–ä¸€å¼ çš„å£«å‘ç¥¨çš„æ‰“å°æ–‡æœ¬
 	 * 
 	 * @param money
 	 * @param taxDate
@@ -62,7 +122,7 @@ public class PrintTax {
 				SystemProperty.WRAP_LINE_CHAR);
 		receiptBuffer.append(getOnBoardTime(money, taxDate)).append(
 				SystemProperty.WRAP_LINE_CHAR);
-		receiptBuffer.append(getOffTaxTime(taxDate)).append(
+		receiptBuffer.append(getOffTaxTime(money,taxDate)).append(
 				SystemProperty.WRAP_LINE_CHAR);
 		receiptBuffer.append(getUnitPrice()).append(
 				SystemProperty.WRAP_LINE_CHAR);
@@ -74,23 +134,25 @@ public class PrintTax {
 				SystemProperty.WRAP_LINE_CHAR);
 		receiptBuffer.append(getHyper()).append(SystemProperty.WRAP_LINE_CHAR);
 		receiptBuffer.append(getHyper()).append(SystemProperty.WRAP_LINE_CHAR);
-		for(int i=0;i<BLANK_LINE_SIZE;i++){
-			receiptBuffer.append(getBlankLine()).append(SystemProperty.WRAP_LINE_CHAR);
+		for (int i = 0; i < BLANK_LINE_SIZE; i++) {
+			receiptBuffer.append(getBlankLine()).append(
+					SystemProperty.WRAP_LINE_CHAR);
 		}
-		return null;
+		return receiptBuffer.toString();
 	}
 
 	/**
-	 * »ñÈ¡ ¿ÕĞĞ
+	 * è·å–ç©ºè¡Œ
+	 * 
 	 * @return
 	 */
-	private static final String getBlankLine(){
+	private static final String getBlankLine() {
 		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN, " ",
 				APPEND_CHAR);
 	}
-	
+
 	/**
-	 * »ñÈ¡----µÄ´®
+	 * è·å–----
 	 * 
 	 * @return
 	 */
@@ -100,39 +162,48 @@ public class PrintTax {
 	}
 
 	/**
-	 * ½ğ¶î
+	 * è·å–é‡‘é¢
 	 * 
 	 * @param money
 	 * @return
 	 */
 	private static final String getTotalPrice(double money) {
-		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN, "$"+FormatManager.formatDecimal("0.00", money)+"Ôª",
-				APPEND_CHAR);
+		return StringUtil
+				.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN,
+						"$" + FormatManager.formatDecimal("0.00", money) + "å…ƒ",
+						APPEND_CHAR);
 	}
 
 	/**
-	 * ºòÊ±
+	 * å€™æ—¶
 	 * 
 	 * @return
 	 * @throws Exception
 	 */
 	private static final String getWaitTime() throws Exception {
-		return null;
+		int waitSecond = random.nextInt(60);
+		String waitTime = "00:00:"
+				+ FormatManager.formatDecimal("00", waitSecond);
+		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN, waitTime,
+				APPEND_CHAR);
 	}
 
 	/**
-	 * ¸ù¾İ·ÑÓÃ¼ÆËã³öÀï³Ì
+	 * é‡Œç¨‹
 	 * 
 	 * @param money
 	 * @return
 	 * @throws Exception
 	 */
 	private static final String getDistance(double money) throws Exception {
-		return null;
+		double distance = 2.5 + (money - 10) / 2.6;
+		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN,
+				FormatManager.formatDecimal("0.0", distance) + "km",
+				APPEND_CHAR);
 	}
 
 	/**
-	 * ÉÏ³µÊ±¼ä
+	 * ä¸Šè½¦æ—¶é—´
 	 * 
 	 * @param money
 	 * @param taxDate
@@ -141,23 +212,56 @@ public class PrintTax {
 	 */
 	private static final String getOnBoardTime(double money, Date taxDate)
 			throws Exception {
-		return null;
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(taxDate);
+		String onBoardTime = null;
+		if (cal.get(Calendar.HOUR_OF_DAY) == 0 && cal.get(Calendar.MINUTE) == 0
+				&& cal.get(Calendar.SECOND) == 0) {
+			if (random.nextBoolean()) {
+				onBoardHour = 21;
+			} else {
+				onBoardHour = 22;
+			}
+			onBoardMin = random.nextInt(60);
+			onBoardTime = FormatManager.formatDecimal("00", onBoardHour) + ":"
+					+ FormatManager.formatDecimal("00", onBoardMin);
+		} else {
+			double distance = 2.5 + (money - 10) / 2.6;
+			double speed = (50 - random.nextInt(10)) / 60.0;
+			double min = distance / speed;
+			cal.add(Calendar.MINUTE, -(int) min);
+			onBoardTime = FormatManager.format(DateFormatPattern.HH_MI, cal);
+		}
+		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN, onBoardTime,
+				APPEND_CHAR);
 	}
 
 	/**
-	 * ÏÂ³µÊ±¼ä
+	 * ä¸‹è½¦æ—¶é—´
 	 * 
 	 * @param taxDate
 	 * @return
 	 */
-	private static final String getOffTaxTime(Date taxDate) {
+	private static final String getOffTaxTime(double money,Date taxDate) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(taxDate);
+		//String offTaxTime = null;
+		if (cal.get(Calendar.HOUR_OF_DAY) == 0 && cal.get(Calendar.MINUTE) == 0
+				&& cal.get(Calendar.SECOND) == 0) {
+			cal.set(Calendar.HOUR_OF_DAY, onBoardHour);
+			cal.set(Calendar.MINUTE, onBoardMin);
+			double distance = 2.5 + (money - 10) / 2.6;
+			double speed = (50 - random.nextInt(10)) / 60.0;
+			double min = distance / speed;
+			cal.add(Calendar.MINUTE, (int) min);
+		}
 		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN,
 				FormatManager.format(DateFormatPattern.HH_MI, taxDate),
 				APPEND_CHAR);
 	}
 
 	/**
-	 * µ¥¼Û
+	 * å•ä»·
 	 * 
 	 * @return
 	 */
@@ -167,7 +271,7 @@ public class PrintTax {
 	}
 
 	/**
-	 * Ëæ»ú»ñÈ¡µÄÊ¿ÊÖ»úºÅÂë
+	 * ç”µè¯
 	 * 
 	 * @return
 	 */
@@ -183,7 +287,7 @@ public class PrintTax {
 	}
 
 	/**
-	 * »ñÈ¡µÄÊ¿³µÅÆ
+	 * çš„å£«å·ç 
 	 * 
 	 * @return
 	 */
@@ -204,7 +308,7 @@ public class PrintTax {
 	}
 
 	/**
-	 * »ñÈ¡Ö¤¼şºÅ
+	 * è¯å·
 	 * 
 	 * @return
 	 */
@@ -214,7 +318,7 @@ public class PrintTax {
 	}
 
 	/**
-	 * »ñÈ¡ÈÕÆÚ
+	 * æ—¥æœŸ
 	 * 
 	 * @return
 	 */

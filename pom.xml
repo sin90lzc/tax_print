@@ -28,5 +28,9 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>${apache.poi.groupId}</groupId>
+			<artifactId>poi-ooxml</artifactId>
+		</dependency>
 	</dependencies>
 </project>
