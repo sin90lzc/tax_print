@@ -8,7 +8,7 @@
 	</parent>
 	<groupId>com.sin90lzc.tax</groupId>
 	<artifactId>tax-print</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0</version>
 
 
 	<dependencies>

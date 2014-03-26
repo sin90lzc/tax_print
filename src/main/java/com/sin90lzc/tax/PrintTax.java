@@ -40,10 +40,11 @@ public class PrintTax {
 
 	private static final Random random = new Random(37);
 
-	private static final int BLANK_LINE_SIZE = 8;
+	private static final int BLANK_LINE_SIZE = 14;
 
 	private static int onBoardHour = 0;
 	private static int onBoardMin = 0;
+	private static boolean swt=false;
 
 	public static void main(String[] args) throws Exception {
 		if (args.length == 0) {
@@ -81,20 +82,20 @@ public class PrintTax {
 				double money = c1.getNumericCellValue();
 				String receipt = getOneReceipt(money, taxDate);
 				System.out.println(receipt);
-				if (!isMore) {
-					System.out.println("continue(Y/N/MORE)?");
-				} else {
-					continue;
-				}
-				String oper=reader.readLine();
-				if ("Y".equals(oper)) {
-					continue;
-				} else if ("MORE".equals(oper)) {
-					isMore = true;
-					continue;
-				} else {
-					break;
-				}
+//				if (!isMore) {
+//					System.out.println("continue(Y/N/MORE)?");
+//				} else {
+//					continue;
+//				}
+//				String oper=reader.readLine();
+//				if ("Y".equals(oper)) {
+//					continue;
+//				} else if ("MORE".equals(oper)) {
+//					isMore = true;
+//					continue;
+//				} else {
+//					break;
+//				}
 			}
 		} finally {
 			if (is != null) {
@@ -134,7 +135,13 @@ public class PrintTax {
 				SystemProperty.WRAP_LINE_CHAR);
 		receiptBuffer.append(getHyper()).append(SystemProperty.WRAP_LINE_CHAR);
 		receiptBuffer.append(getHyper()).append(SystemProperty.WRAP_LINE_CHAR);
+		
 		for (int i = 0; i < BLANK_LINE_SIZE; i++) {
+			receiptBuffer.append(getBlankLine()).append(
+					SystemProperty.WRAP_LINE_CHAR);
+		}
+		swt=!swt;
+		if(swt){
 			receiptBuffer.append(getBlankLine()).append(
 					SystemProperty.WRAP_LINE_CHAR);
 		}
@@ -256,7 +263,7 @@ public class PrintTax {
 			cal.add(Calendar.MINUTE, (int) min);
 		}
 		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN,
-				FormatManager.format(DateFormatPattern.HH_MI, taxDate),
+				FormatManager.format(DateFormatPattern.HH_MI, cal),
 				APPEND_CHAR);
 	}
 
@@ -313,7 +320,7 @@ public class PrintTax {
 	 * @return
 	 */
 	private static final String getCred() {
-		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN, "0000",
+		return StringUtil.alignTo(Alignment.RIGHT_ALIGN, MAX_LEN, "111111",
 				APPEND_CHAR);
 	}
 
